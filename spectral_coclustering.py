@@ -4,22 +4,22 @@ from numpy import dot
 from time import time
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import pdist, squareform
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
-#fast version
-from scikits.learn.utils.extmath import fast_svd
-from scikits.learn.cluster import k_means, affinity_propagation
+from sklearn.cluster import k_means, affinity_propagation
 import pylab as pl
 
 def ap(z):
     sim_matrix = -squareform(pdist(z, 'euclidean'))
 
     p = np.median(sim_matrix) * 1
-    center, labels = affinity_propagation(sim_matrix, p=p, verbose=True, max_iter=2000)
+    center, labels = affinity_propagation(sim_matrix, preference=p, verbose=True, max_iter=2000)
 
     return labels
 
 def show_cluster(A, name):
-    print A
+    print (A)
     cdict = {'red': ((0.0, 1.0, 1.0),
                      (1.0, 0.5, 0.5)),
              'green': ((0.0, 1.0, 1.0),
@@ -61,9 +61,10 @@ def spectral_coclustering(A, use_k_means=False, k=3):
     U, S, V = svd(An)
     V = np.transpose(V)
     #print U, S, V
-    print "%s" % (time() - t1)
+    print ("%s" % (time() - t1))
 
-    n_eigen = np.ceil(np.log2(k))
+    n_eigen = int(np.ceil(np.log2(k)))
+
     z = np.vstack((dot(D1_root, U[:, 1:n_eigen+1]), 
             dot(D2_root, V[:,1:n_eigen+1])))
 
@@ -73,7 +74,7 @@ def spectral_coclustering(A, use_k_means=False, k=3):
     else:
         t1 = time()
         labels = ap(z)
-        print "%s" % (time() - t1)
+        print ("%s" % (time() - t1))
 
     r_labels = labels[:A.shape[0]]
     c_labels = labels[A.shape[0]:]
@@ -94,7 +95,7 @@ def reorder_matrix(mat, r_labels, c_labels):
     Given a dense cluster, sort the points inside the cluster 
     so that they are less tangled and look nice.
     """
-    show_cluster(mat, "before.pdf")
+    show_cluster(mat, dir_path+"/before.pdf")
 
     new_r_idx = reorder_axis(r_labels)
     new_c_idx = reorder_axis(c_labels)
@@ -106,7 +107,7 @@ def reorder_matrix(mat, r_labels, c_labels):
     # adjust the order between clusters
     new_mat = adjust_col(new_mat, r_labels, c_labels, new_r_idx, new_c_idx)
     
-    show_cluster(new_mat, "after.pdf")
+    show_cluster(new_mat, dir_path+"/after.pdf")
 
     return new_mat, new_r_idx, new_c_idx
 
@@ -117,7 +118,7 @@ def adjust_col(new_mat, r_labels, c_labels, new_r_idx, new_c_idx):
 
     n_row, n_col = new_mat.shape
 
-    left = range(n_col)
+    left = list(range(n_col))
     left.remove(c_li[-1])
     while len(c_li) != n_col:
         last = c_li[-1]
@@ -141,6 +142,6 @@ def sim(mat, i, j):
     return (np.sum(mat[:, i] == mat[:, j]))
 
 if __name__ == "__main__":
-    A = np.loadtxt('town.csv', delimiter=",")
+    A = np.loadtxt(dir_path+'/town.csv', delimiter=",")
     r_labels, c_labels = spectral_coclustering(A)
     new_A, new_r_idx, new_c_idx = reorder_matrix(A, r_labels, c_labels)
